@@ -1,8 +1,8 @@
 <?php
     //外部ファイルの読み込み
-    require_once'models/Post.php';
+    require_once'models/Favorite.php';
     //DAO: DBを扱う専門家
-    class PostDAO {
+    class FavoriteDAO {
         //データベースと接続するめぞっド
         //private ここでしか使わないメソッド
         // static ::を示す
@@ -25,18 +25,21 @@
             //結果、さようなら
             $stmt = null;
         }
-        //DBから全投稿情報を取得する
-        public static function get_all_posts(){
+        //DBから該当投稿に対する全コメント情報を取得する
+        public static function get_all_comments_by_post_id($post_id){
         // 例外処理
             try{
                 // データベースに接続して万能の神様誕生
                 $pdo = self::get_connection();
-                // SELECT文実行 statement object
-                $stmt = $pdo->query('SELECT * FROM posts');
-                // Fetch ModeをPostクラスに設定
-                $stmt->setFetchMode(PDO::FETCH_CLASS|PDO::FETCH_PROPS_LATE, 'Post');
-                // SELECT文の結果を Postクラスのインスタンス配列に格納
-                $posts = $stmt->fetchAll();
+                // SELECT文実行準備 statement object
+                $stmt = $pdo->prepare('SELECT * FROM comments WHERe post_id=:post_id');
+                $stmt->bindValue(':post_id', $post_id, PDO::PARAM_INT);
+                // INSERT文本番実行
+                $stmt->execute();
+                // Fetch ModeをCommentクラスに設定
+                $stmt->setFetchMode(PDO::FETCH_CLASS|PDO::FETCH_PROPS_LATE, 'Comment');
+                // SELECT文の結果を commentクラスのインスタンス配列に格納
+                $comments = $stmt->fetchAll();
                 
             }catch(PDOException $e){
             }finally{
@@ -44,23 +47,21 @@
                 self::close_connection($pdo, $stmt);
             }
             // 完成した投稿一覧、はいあげる
-            return $posts;    
+            return $comments;    
         }
-        //新規投稿登録をするメソッド
-        public static function insert($post) {
+        //新規コメント登録をするメソッド
+        public static function insert($favorite) {
             // 例外処理
             try{
                 // データベースに接続して万能の神様誕生
                 $pdo = self::get_connection();
                 // 具体的な値はあいまいにしたまま INSERT文の実行準備
-                $stmt = $pdo->prepare('INSERT INTO posts(user_id, title, content, image) VALUES(:user_id, :title, :content, :image)');
+                $stmt = $pdo->prepare('INSERT INTO favorites(user_id, post_id) VALUES(:user_id, :post_id)');
                 // バインド処理（あいまいだった値を具体的な値で穴埋めする）
                 //文字列　‗STR　　整数‗INT
-                $stmt->bindValue(':user_id', $post->user_id, PDO::PARAM_INT);
-                $stmt->bindValue(':title', $post->title, PDO::PARAM_STR);
-                $stmt->bindValue(':content', $post->content, PDO::PARAM_STR);
-                $stmt->bindValue(':image', $post->image, PDO::PARAM_STR);
-
+                $stmt->bindValue(':user_id', $favorite->user_id, PDO::PARAM_INT);
+                $stmt->bindValue(':post_id', $favorite->post_id, PDO::PARAM_INT);
+              
                 // INSERT文本番実行
                 $stmt->execute();
                 
@@ -149,16 +150,17 @@
                 self::close_connection($pdo, $stmt);
             }
         } 
-        //$idのユーザを削除する
-        public static function delete($id){
+        //あるユーザがある投稿にいいねしている情報を削除する
+        public static function delete($user_id, $post_id){
             //例外処理
              try{
                 // データベースに接続して万能の神様誕生
                 $pdo = self::get_connection();
                 // DELETE文の実行準備(:idは適当、不明確)
-                $stmt = $pdo->prepare('DELETE FROM users WHERE id=:id');
+                $stmt = $pdo->prepare('DELETE FROM favorites WHERE user_id=:user_id AND post_id=:post_id');
                 // バインド処理（あいまいだった値を具体的な値で穴埋めする）
-                $stmt->bindValue(':id', $id, PDO::PARAM_INT);
+                $stmt->bindValue(':user_id', $user_id, PDO::PARAM_INT);
+                $stmt->bindValue(':post_id', $post_id, PDO::PARAM_INT);
 
                 // DELETE文本番実行
                 $stmt->execute();
@@ -196,6 +198,63 @@
             }
             // 完成した、はい投稿あげる
             return $post;  
+        }
+        
+        //あるユーザーが投稿にいいねしているか判断するメソッド
+        public static function check($user_id, $post_id){
+            //例外処理
+             try{
+                // データベースに接続して万能の神様誕生
+                $pdo = self::get_connection();
+                // SELECT文の実行準備(:idは適当、不明確)
+                $stmt = $pdo->prepare('SELECT * FROM favorites WHERE user_id=:user_id AND post_id=:post_id');
+                // バインド処理（あいまいだった値を具体的な値で穴埋めする）
+                $stmt->bindValue(':user_id', $user_id, PDO::PARAM_INT);
+                $stmt->bindValue(':post_id', $post_id, PDO::PARAM_INT);
+                // SELECT文本番実行
+                $stmt->execute();
+
+                // Fetch ModeをFavoriteクラスに設定
+                $stmt->setFetchMode(PDO::FETCH_CLASS|PDO::FETCH_PROPS_LATE, 'Favorite');
+                // SELECT文の結果を favoriteラスのインスタンスに格納
+                $favorite = $stmt->fetch();
+                
+            }catch(PDOException $e){
+                
+            }finally{
+                // 後処理
+                self::close_connection($pdo, $stmt);
+            }
+            // 完成した'いいね'、はい投稿あげる
+            return $favorite;    
+        }
+
+        //ある投稿にいいねしている人数を取得する
+        public static function count_favorites($post_id){
+            //例外処理
+             try{
+                // データベースに接続して万能の神様誕生
+                $pdo = self::get_connection();
+                // SELECT文の実行準備(:idは適当、不明確)
+                $stmt = $pdo->prepare('SELECT * FROM favorites WHERE post_id=:post_id');
+                // バインド処理（あいまいだった値を具体的な値で穴埋めする）
+                $stmt->bindValue(':post_id', $post_id, PDO::PARAM_INT);
+                // SELECT文本番実行
+                $stmt->execute();
+
+                // Fetch ModeをFavoriteクラスに設定
+                $stmt->setFetchMode(PDO::FETCH_CLASS|PDO::FETCH_PROPS_LATE, 'Favorite');
+                // SELECT文の結果を Favoriteクラスのインスタンスに格納
+                $favorites = $stmt->fetchAll();
+                
+            }catch(PDOException $e){
+                
+            }finally{
+                // 後処理
+                self::close_connection($pdo, $stmt);
+            }
+            // いいね数を、はい投稿あげる
+            return count($favorites);
         }
     }
     

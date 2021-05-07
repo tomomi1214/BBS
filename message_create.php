@@ -25,3 +25,7 @@
 
     // uploadディレクトリにファイル保存
     move_uploaded_file($_FILES['image']['tmp_name'], $file);
+    
+    //画面遷移
+    header('Location: top.php');
+    exit;

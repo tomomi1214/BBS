@@ -1,8 +1,8 @@
 <?php
     //外部ファイルの読み込み
-    require_once'models/Post.php';
+    require_once'models/Comment.php';
     //DAO: DBを扱う専門家
-    class PostDAO {
+    class CommentDAO {
         //データベースと接続するめぞっド
         //private ここでしか使わないメソッド
         // static ::を示す
@@ -25,18 +25,21 @@
             //結果、さようなら
             $stmt = null;
         }
-        //DBから全投稿情報を取得する
-        public static function get_all_posts(){
+        //DBから該当投稿に対する全コメント情報を取得する
+        public static function get_all_comments_by_post_id($post_id){
         // 例外処理
             try{
                 // データベースに接続して万能の神様誕生
                 $pdo = self::get_connection();
-                // SELECT文実行 statement object
-                $stmt = $pdo->query('SELECT * FROM posts');
-                // Fetch ModeをPostクラスに設定
-                $stmt->setFetchMode(PDO::FETCH_CLASS|PDO::FETCH_PROPS_LATE, 'Post');
-                // SELECT文の結果を Postクラスのインスタンス配列に格納
-                $posts = $stmt->fetchAll();
+                // SELECT文実行準備 statement object
+                $stmt = $pdo->prepare('SELECT * FROM comments WHERe post_id=:post_id');
+                $stmt->bindValue(':post_id', $post_id, PDO::PARAM_INT);
+                // INSERT文本番実行
+                $stmt->execute();
+                // Fetch ModeをCommentクラスに設定
+                $stmt->setFetchMode(PDO::FETCH_CLASS|PDO::FETCH_PROPS_LATE, 'Comment');
+                // SELECT文の結果を commentクラスのインスタンス配列に格納
+                $comments = $stmt->fetchAll();
                 
             }catch(PDOException $e){
             }finally{
@@ -44,23 +47,22 @@
                 self::close_connection($pdo, $stmt);
             }
             // 完成した投稿一覧、はいあげる
-            return $posts;    
+            return $comments;    
         }
-        //新規投稿登録をするメソッド
-        public static function insert($post) {
+        //新規コメント登録をするメソッド
+        public static function insert($comment) {
             // 例外処理
             try{
                 // データベースに接続して万能の神様誕生
                 $pdo = self::get_connection();
                 // 具体的な値はあいまいにしたまま INSERT文の実行準備
-                $stmt = $pdo->prepare('INSERT INTO posts(user_id, title, content, image) VALUES(:user_id, :title, :content, :image)');
+                $stmt = $pdo->prepare('INSERT INTO comments(user_id, post_id, content) VALUES(:user_id, :post_id, :content)');
                 // バインド処理（あいまいだった値を具体的な値で穴埋めする）
                 //文字列　‗STR　　整数‗INT
-                $stmt->bindValue(':user_id', $post->user_id, PDO::PARAM_INT);
-                $stmt->bindValue(':title', $post->title, PDO::PARAM_STR);
-                $stmt->bindValue(':content', $post->content, PDO::PARAM_STR);
-                $stmt->bindValue(':image', $post->image, PDO::PARAM_STR);
-
+                $stmt->bindValue(':user_id', $comment->user_id, PDO::PARAM_INT);
+                $stmt->bindValue(':post_id', $comment->post_id, PDO::PARAM_INT);
+                $stmt->bindValue(':content', $comment->content, PDO::PARAM_STR);
+            
                 // INSERT文本番実行
                 $stmt->execute();
                 
