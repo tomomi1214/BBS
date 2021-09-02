@@ -9,7 +9,7 @@
         <h1><?=$post->id ?>番目の投稿詳細</h1>
         <div>
             <ul>
-                <li><?= $post->id ?></a></li>
+                <li><?= $post->id ?></li>
                 <li><?= $post->user()->name ?></li>
                 <li><?= $post->title ?></li>
                 <li><?= $post->content ?></li>

@@ -13,5 +13,5 @@
     //var_dump($posts);
     
     //View表示
-    include_once 'views/top_view.php';
+    include_once 'views/mypage_top_view.php';
     

@@ -16,7 +16,7 @@
                 <li><?= $post->title ?></li>
                 <li><?= $post->content ?></li>
                 <li><img src="upload/<?= $post->image ?>"></li>
-                            </ul>
+            </ul>
             <?php endforeach; ?>
         </div>
         
